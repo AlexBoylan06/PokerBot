@@ -1,50 +1,65 @@
+import itertools
+import pandas as pd
 import random
-from itertools import combinations
-from Main import Deck
-from Main import Player
+import subprocess
 
+# Poker hand rankings
+HAND_RANKS = [
+    "High Card", "One Pair", "Two Pair", "Three of a Kind", "Straight",
+    "Flush", "Full House", "Four of a Kind", "Straight Flush", "Royal Flush"
+]
 
-class PokerDataGenerator:
-    def __init__(self, num_simulations=1000, num_players=6):
-        self.num_simulations = num_simulations
-        self.num_players = num_players
+# Generate all 52 cards
+RANKS = '23456789TJQKA'
+SUITS = 'CDHS'
+DECK = [r + s for r in RANKS for s in SUITS]
 
-    def generate_hand(self):
-        """Generates a random poker hand with hole cards and community cards."""
-        deck = Deck()  # Create and shuffle the deck
-        players = [Player(f"Player {i + 1}") for i in range(self.num_players)]
+def pokerstove_eval(hole_cards, board_cards):
+    """Run PokerStove to get hand equity"""
+    command = f'echo "{hole_cards}: xx xx" | pokerstove -board {board_cards} -eval'
+    result = subprocess.run(command, shell=True, capture_output=True, text=True)
+    try:
+        equity_line = result.stdout.splitlines()[-1]
+        equity = float(equity_line.split()[2])  # Extract % win probability
+        return equity
+    except Exception as e:
+        print("PokerStove Error:", e)
+        return None
 
-        # Deal hole cards to each player
-        for player in players:
-            player.receive_cards(deck.deal(2))
+def generate_poker_data(num_samples=10000):
+    data = []
 
-        # Generate community cards
-        community_cards = deck.deal(5)
+    for _ in range(num_samples):
+        deck = DECK.copy()
+        random.shuffle(deck)
 
-        return {
-            "players": {player.name: player.hand for player in players},
-            "community_cards": community_cards
-        }
+        hole_cards = deck[:2]  # Player's hole cards
+        flop = deck[2:5]  # Flop (3 cards)
+        turn = deck[5]  # Turn (1 card)
+        river = deck[6]  # River (1 card)
 
-    def generate_dataset(self):
-        """Generates a dataset of simulated poker hands."""
-        dataset = []
-        for _ in range(self.num_simulations):
-            hand = self.generate_hand()
-            dataset.append(hand)
+        board = flop + [turn, river]
+        equity = pokerstove_eval(" ".join(hole_cards), " ".join(board))
 
-        return dataset
+        if equity is None:
+            continue  # Skip invalid results
 
-    def save_dataset(self, filename="poker_data.json"):
-        """Saves generated poker hands to a JSON file."""
-        import json
-        dataset = self.generate_dataset()
-        with open(filename, "w") as file:
-            json.dump(dataset, file, indent=4)
-        print(f"Dataset saved to {filename}")
+        # Assign a rank based on equity (simplified approach)
+        hand_rank = HAND_RANKS[min(int(equity / 10), 9)]
 
+        data.append({
+            "Hole Cards": ", ".join(hole_cards),
+            "Flop": ", ".join(flop),
+            "Turn": turn,
+            "River": river,
+            "Hand Rank": hand_rank
+        })
 
-# Example usage
+    # Save to CSV
+    df = pd.DataFrame(data)
+    df.to_csv("data/poker_data.csv", index=False)
+    print(f"✅ Poker data saved: data/poker_data.csv ({len(data)} hands)")
+
+# Run the generator
 if __name__ == "__main__":
-    generator = PokerDataGenerator(num_simulations=100)
-    generator.save_dataset()
+    generate_poker_data(10000)

@@ -1,5 +1,7 @@
 import random
 
+from pokerstove import PokerHandEvaluator, CardSet
+
 
 # Card Class
 class Card:
@@ -97,23 +99,34 @@ class Player:
 
 if __name__ == "__main__":
     # Create a player
-    player1 = Player("Alice", 1500)
-
-    # Create a deck and deal 2 cards
-    deck = Deck()
-    player1.receive_cards(deck.deal(2))
-
-    print(player1)  # See initial state
-
-    # Betting scenario
-    player1.bet(200)
-    print(player1)
-
-    # Player folds
-    player1.fold()
-    print(player1)
-
-    # Reset for a new round
-    player1.reset_for_new_round()
-    print(player1)
+    # player1 = Player("Alice", 1500)
+    #
+    # # Create a deck and deal 2 cards
+    # deck = Deck()
+    # player1.receive_cards(deck.deal(2))
+    #
+    # print(player1)  # See initial state
+    #
+    # # Betting scenario
+    # player1.bet(200)
+    # print(player1)
+    #
+    # # Player folds
+    # player1.fold()
+    # print(player1)
+    #
+    # # Reset for a new round
+    # player1.reset_for_new_round()
+    # print(player1)
+    cs1 = CardSet()
+    cs2 = CardSet(0x8E)
+    cs3 = CardSet('AcAh8c8d2s')
+    cs4 = CardSet('8hAh')
+    cs5 = CardSet('Ac8dKc')
+    print('-- holdem hand evaluation --')
+    v = PokerHandEvaluator.alloc('h')
+    e4 = v.evaluateHand(cs4)
+    e5 = v.evaluateHand(cs4, cs5)
+    print(e4)
+    print(e5)
 
